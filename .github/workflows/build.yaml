@@ -161,8 +161,8 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:${{ env.VERSION }}
             ghcr.io/${{ github.repository }}:latest
-          #  ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ env.VERSION }}
-          #  ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
+      #      ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ env.VERSION }}
+      #      ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
 
   # =============================================================================================================================================================================================
 
@@ -267,8 +267,8 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:${{ env.VERSION }}
             ghcr.io/${{ github.repository }}:dev-next
-          #  ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ env.VERSION }}
-          #  ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:dev-next
+      #      ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ env.VERSION }}
+      #      ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:dev-next
 
   # =============================================================================================================================================================================================
 
