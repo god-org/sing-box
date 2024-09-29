@@ -159,10 +159,10 @@ jobs:
           platforms: linux/amd64, linux/arm64
           build-args: BRANCH=${{ env.VERSION }}
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ env.VERSION }}
-            ghcr.io/${{ github.repository }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
             ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+            ghcr.io/${{ github.repository }}:latest
 
   # =============================================================================================================================================================================================
 
@@ -265,10 +265,10 @@ jobs:
           platforms: linux/amd64, linux/arm64
           build-args: BRANCH=${{ env.VERSION }}
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:dev-next
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ env.VERSION }}
-            ghcr.io/${{ github.repository }}:dev-next
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:dev-next
             ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+            ghcr.io/${{ github.repository }}:dev-next
 
   # =============================================================================================================================================================================================
 
