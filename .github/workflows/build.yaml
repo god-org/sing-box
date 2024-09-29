@@ -139,11 +139,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@master
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@master
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      #- name: Login to Docker Hub
+      #  uses: docker/login-action@master
+      #  with:
+      #    username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #    password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@master
@@ -159,10 +159,10 @@ jobs:
           platforms: linux/amd64, linux/arm64
           build-args: BRANCH=${{ env.VERSION }}
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ env.VERSION }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
             ghcr.io/${{ github.repository }}:${{ env.VERSION }}
             ghcr.io/${{ github.repository }}:latest
+          #  ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ env.VERSION }}
+          #  ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
 
   # =============================================================================================================================================================================================
 
@@ -245,11 +245,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@master
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@master
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      #- name: Login to Docker Hub
+      #  uses: docker/login-action@master
+      #  with:
+      #    username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #    password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@master
@@ -265,10 +265,10 @@ jobs:
           platforms: linux/amd64, linux/arm64
           build-args: BRANCH=${{ env.VERSION }}
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ env.VERSION }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:dev-next
             ghcr.io/${{ github.repository }}:${{ env.VERSION }}
             ghcr.io/${{ github.repository }}:dev-next
+          #  ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ env.VERSION }}
+          #  ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:dev-next
 
   # =============================================================================================================================================================================================
 
