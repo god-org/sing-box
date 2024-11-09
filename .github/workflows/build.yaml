@@ -1,0 +1,207 @@
+name: Build
+
+on:
+  workflow_dispatch:
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  TZ: Asia/Shanghai
+
+jobs:
+  Check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      main_next_now: ${{ steps.get-version.outputs.main_next_now }}
+      main_next_new: ${{ steps.get-version.outputs.main_next_new }}
+      main_next_renew: ${{ steps.get-version.outputs.main_next_renew }}
+      commit: ${{ steps.get-version.outputs.commit }}
+      go_version: ${{ steps.get-version.outputs.go_version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@main
+
+      - name: Check version
+        id: get-version
+        run: |
+          MAIN_NEXT_NOW=$(awk '/latest/{print $NF; exit}' README.md)
+
+          LIST=$(wget -qO- --tries=3 "https://api.github.com/repos/SagerNet/sing-box/releases" | awk -F '"' '/tag_name/{print $(NF-1)}')
+          MAIN_NEXT_NEW=$(grep -vm1 '-' <<< "$LIST")
+          GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | awk 'NR==1' | sed 's/^go//')
+
+          echo "MAIN_NEXT_NOW: $MAIN_NEXT_NOW"
+          echo "MAIN_NEXT_NEW: $MAIN_NEXT_NEW"
+          echo "GO_VERSION: $GO_VERSION"
+
+          if [ "$MAIN_NEXT_NOW" != "$MAIN_NEXT_NEW" ]; then
+            MAIN_NEXT_RENEW=1
+          fi
+
+          if [ "$MAIN_NEXT_NOW" != "$MAIN_NEXT_NEW" ]; then
+            echo "main_next_now=$MAIN_NEXT_NOW" >> $GITHUB_OUTPUT
+            echo "main_next_new=$MAIN_NEXT_NEW" >> $GITHUB_OUTPUT
+            echo "main_next_renew=$MAIN_NEXT_RENEW" >> $GITHUB_OUTPUT
+          fi
+
+          echo "go_version=$GO_VERSION" >> $GITHUB_OUTPUT
+
+          DATE=$(date +"%Y/%m/%d")
+          if [ "$MAIN_NEXT_RENEW" == '1' ]; then
+            COMMIT="Build to $MAIN_NEXT_NEW by Github Actions, $DATE"
+            echo "commit=$COMMIT" >> $GITHUB_OUTPUT
+          fi
+
+  # ===========================================================================
+
+  Create-release:
+    needs:
+      - Check-version
+    runs-on: ubuntu-latest
+    if: ${{ needs.Check-version.outputs.commit != '' }}
+    env:
+      MAIN_NEXT_VERSION: ${{ needs.Check-version.outputs.main_next_new }}
+      MAIN_NEXT_RENEW: ${{ needs.Check-version.outputs.main_next_renew }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@main
+
+      - name: Create main-next release
+        if: ${{ env.MAIN_NEXT_RENEW == '1' }}
+        uses: shogo82148/actions-create-release@v1
+        with:
+          tag_name: ${{ env.MAIN_NEXT_VERSION }}
+          release_name: ${{ env.MAIN_NEXT_VERSION }}
+          overwrite: true
+
+  # ===========================================================================
+
+  Build-main-next-image:
+    needs:
+      - Check-version
+    runs-on: ubuntu-latest
+    if: ${{ needs.Check-version.outputs.main_next_new != '' }}
+    env:
+      VERSION: ${{ needs.Check-version.outputs.main_next_new }}
+
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@master
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@master
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@master
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@master
+        with:
+          push: true
+          platforms: linux/amd64, linux/arm64
+          build-args: |
+            BRANCH=${{ env.VERSION }}
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+            ghcr.io/${{ github.repository }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ===========================================================================
+
+  Build-main-next-releases:
+    needs:
+      - Check-version
+      - Create-release
+    runs-on: ubuntu-latest
+    if: ${{ needs.Check-version.outputs.main_next_new != '' }}
+    env:
+      CGO_ENABLED: 0
+      VERSION: ${{ needs.Check-version.outputs.main_next_new }}
+      GO_VERSION: ${{ needs.Check-version.outputs.go_version }}
+
+    strategy:
+      matrix:
+        goos: [linux, freebsd]
+        goarch: [amd64, arm64]
+        exclude:
+          - goarch: arm64
+            goos: freebsd
+
+    steps:
+      - name: Git clone repository
+        uses: actions/checkout@main
+        with:
+          repository: SagerNet/sing-box
+          ref: ${{ env.VERSION }}
+
+      - name: Setup go
+        uses: actions/setup-go@main
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Run go mod tidy
+        run: |
+          go version
+          go mod tidy
+
+      - name: Build main-next releases
+        uses: fscarmen/go-release-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+          goversion: ${{ env.GO_VERSION }}
+          build_flags: -v -trimpath -tags with_quic,with_wireguard,with_ech,with_utls,with_reality_server,with_clash_api,with_gvisor
+          ldflags: -X github.com/sagernet/sing-box/constant.Version=${{ env.VERSION }} -s -w -buildid=
+          project_path: ./cmd/sing-box
+          binary_name: ${{ github.event.repository.name }}
+          md5sum: false
+          release_tag: ${{ env.VERSION }}
+          release_name: ${{ env.VERSION }}
+          overwrite: true
+          asset_name: ${{ github.event.repository.name }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          compress_assets: auto
+
+  # ===========================================================================
+
+  Mark-image-version:
+    needs:
+      - Check-version
+      - Create-release
+      - Build-main-next-image
+      - Build-main-next-releases
+    runs-on: ubuntu-latest
+    if: ${{ needs.Create-release.result == 'success' && !cancelled() && !failure() }}
+    env:
+      MAIN_NEXT_NEW: ${{ needs.Check-version.outputs.main_next_new }}
+      MAIN_NEXT_RENEW: ${{ needs.Check-version.outputs.main_next_renew }}
+      COMMIT: ${{ needs.Check-version.outputs.commit }}
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+
+      - name: Check and Mark
+        run: |
+          if [ "${{ env.MAIN_NEXT_RENEW }}" == '1' ]; then
+            sed -i "s/\(latest.*:\).*/\1 ${{ env.MAIN_NEXT_NEW }}/" README.md
+          fi
+
+          git checkout --orphan tmp_work
+          git branch -d main
+
+      - name: Upload to repository
+        uses: stefanzweifel/git-auto-commit-action@master
+        with:
+          commit_message: ${{ env.COMMIT }}
+          create_branch: true
+          branch: main
+          push_options: --force
