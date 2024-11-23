@@ -1,6 +1,6 @@
 # 版本
 
-- ### **latest**: v1.10.1
+- ### **latest**: v1.10.2
 - ### **Tags**:
   - `with_quic`
   - `with_wireguard`
