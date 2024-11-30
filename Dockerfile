@@ -8,7 +8,7 @@ RUN set -ex \
     && apk add --no-cache git build-base \
     && git clone -b $BRANCH --single-branch --depth=1 https://github.com/sagernet/sing-box /go/src/github.com/sagernet/sing-box \
     && go version \
-    && go mod tidy \
+    && go mod tidy -v \
     && export COMMIT=$(git rev-parse --short HEAD) \
     && export VERSION=$(go run ./cmd/internal/read_tag) \
     && go build -v -trimpath -tags "with_quic,with_wireguard,with_ech,with_utls,with_reality_server,with_clash_api,with_gvisor" \

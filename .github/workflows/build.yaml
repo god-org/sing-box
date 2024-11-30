@@ -148,7 +148,7 @@ jobs:
       - name: Run go mod tidy
         run: |
           go version
-          go mod tidy
+          go mod tidy -v
 
       - name: Build main-next releases
         uses: fscarmen/go-release-action@master
