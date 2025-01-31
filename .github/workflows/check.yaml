@@ -1,0 +1,45 @@
+name: Check
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  TZ: Asia/Shanghai
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get Release Version
+        id: getVersion
+        run: |
+          LIST=$(wget -qO- --tries=3 "https://api.github.com/repos/SagerNet/sing-box/releases" | awk -F '"' '/tag_name/{print $(NF-1)}')
+          echo "main_next=$(grep -vm1 '-' <<< "$LIST")" >> $GITHUB_OUTPUT
+
+      - name: Compare Release Versions
+        id: cacheVersions
+        uses: actions/cache@main
+        with:
+          path: .releaseVersions
+          key: releaseVersions_${{ steps.getVersion.outputs.main_next }}
+
+      - name: Save New Release Versions
+        if: ${{ steps.cacheVersions.outputs.cache-hit != 'true' }}
+        run: |
+          echo ${{ steps.getVersion.outputs.main_next }} | tee .releaseVersions
+
+      - name: Invoke workflow without inputs
+        if: ${{ steps.cacheVersions.outputs.cache-hit != 'true' }}
+        uses: benc-uk/workflow-dispatch@master
+        with:
+          workflow: Build
+
+      - name: Delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@main
+        with:
+          retain_days: 0
+          keep_minimum_runs: 1
